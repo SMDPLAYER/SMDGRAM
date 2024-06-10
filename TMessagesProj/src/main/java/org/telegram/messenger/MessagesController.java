@@ -18926,6 +18926,13 @@ public class MessagesController extends BaseController implements NotificationCe
     public boolean isDialogMuted(long dialogId, long topicId) {
         return isDialogMuted(dialogId, topicId, null);
     }
+    public boolean isDialogHidden(long dialogId) {
+        return notificationsPreferences.getBoolean("is_hidden_" + NotificationsController.getSharedPrefKey(dialogId, 0), false);
+    }
+
+    public boolean hideDialog(long dialogId, long topicId,boolean hide) {
+        return notificationsPreferences.edit().putBoolean("is_hidden_" + NotificationsController.getSharedPrefKey(dialogId, topicId),hide).commit();
+    }
 
     public boolean isDialogNotificationsSoundEnabled(long dialogId, long topicId) {
         return notificationsPreferences.getBoolean("sound_enabled_" + NotificationsController.getSharedPrefKey(dialogId, topicId), true);

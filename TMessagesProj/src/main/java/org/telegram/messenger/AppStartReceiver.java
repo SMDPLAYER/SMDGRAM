@@ -20,6 +20,7 @@ public class AppStartReceiver extends BroadcastReceiver {
                 SharedConfig.loadConfig();
                 if (SharedConfig.passcodeHash.length() > 0) {
                     SharedConfig.appLocked = true;
+                    SharedConfig.passByHiddenPasscode = false;
                     SharedConfig.saveConfig();
                 }
                 ApplicationLoader.startPushService();

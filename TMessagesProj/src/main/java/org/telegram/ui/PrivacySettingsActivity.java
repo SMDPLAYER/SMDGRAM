@@ -12,6 +12,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
@@ -100,6 +101,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     private int passwordRow;
     private int sessionsRow;
     private int passcodeRow;
+    private int hiddenPasscodeRow;
     private int autoDeleteMesages;
     private int sessionsDetailRow;
     private int newChatsHeaderRow;
@@ -431,6 +433,12 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 }
             } else if (position == passcodeRow) {
                 presentFragment(PasscodeActivity.determineOpenFragment());
+            }  else if (position == hiddenPasscodeRow) {
+                if (SharedConfig.passcodeHash.length() != 0){
+                    Intent myIntent = new Intent(getParentActivity(), HiddenPasscodeActivity.class);
+                    getParentActivity().startActivity(myIntent);
+                }
+                else Toast.makeText(context,"Please enable Passcode Lock",Toast.LENGTH_SHORT).show();
             } else if (position == secretWebpageRow) {
                 if (getMessagesController().secretWebpagePreview == 1) {
                     getMessagesController().secretWebpagePreview = 0;
@@ -646,6 +654,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         passwordRow = rowCount++;
         autoDeleteMesages = rowCount++;
         passcodeRow = rowCount++;
+        hiddenPasscodeRow = rowCount++;
         if (currentPassword != null ? currentPassword.login_email_pattern != null : SharedConfig.hasEmailLogin) {
             emailLoginRow = rowCount++;
         } else {
@@ -908,7 +917,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == passcodeRow || position == passwordRow || position == blockedRow || position == sessionsRow || position == secretWebpageRow || position == webSessionsRow ||
+            return position == passcodeRow || position == hiddenPasscodeRow || position == passwordRow || position == blockedRow || position == sessionsRow || position == secretWebpageRow || position == webSessionsRow ||
                     position == groupsRow && !getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_INVITE) ||
                     position == lastSeenRow && !getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_LASTSEEN) ||
                     position == callsRow && !getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_CALLS) ||
@@ -1224,6 +1233,16 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                             icon = R.drawable.msg2_secret;
                         }
                         textCell2.setTextAndValueAndIcon(LocaleController.getString("Passcode", R.string.Passcode), value, true, icon, true);
+                    }  else if (position == hiddenPasscodeRow) {
+                        int icon;
+                        if (SharedConfig.hiddenPasscodeHash.length() != 0) {
+                            value = LocaleController.getString("PasswordOn", R.string.PasswordOn);
+                            icon = R.drawable.msg2_secret;
+                        } else {
+                            value = LocaleController.getString("PasswordOff", R.string.PasswordOff);
+                            icon = R.drawable.msg2_secret;
+                        }
+                        textCell2.setTextAndValueAndIcon(LocaleController.getString("HiddenPasscode", R.string.HiddenPasscode), value, true, icon, true);
                     } else if (position == blockedRow) {
                         int totalCount = getMessagesController().totalBlockedCount;
                         if (totalCount == 0) {
@@ -1255,7 +1274,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 return 3;
             } else if (position == botsAndWebsitesShadowRow) {
                 return 4;
-            } else if (position == autoDeleteMesages || position == sessionsRow || position == emailLoginRow || position == passwordRow || position == passcodeRow || position == blockedRow) {
+            } else if (position == autoDeleteMesages || position == sessionsRow || position == emailLoginRow || position == passwordRow || position == passcodeRow || position == hiddenPasscodeRow || position == blockedRow) {
                 return 5;
             }
             return 0;

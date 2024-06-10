@@ -221,6 +221,8 @@ public class SharedConfig {
     @PasscodeType
     public static int passcodeType;
     public static String passcodeHash = "";
+    public static String hiddenPasscodeHash = "";
+    public static boolean passByHiddenPasscode = true;
     public static long passcodeRetryInMs;
     public static long lastUptimeMillis;
     public static int badPasscodeTries;
@@ -424,6 +426,8 @@ public class SharedConfig {
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putBoolean("saveIncomingPhotos", saveIncomingPhotos);
                 editor.putString("passcodeHash1", passcodeHash);
+                editor.putString("hiddenPasscodeHash1", hiddenPasscodeHash);
+                editor.putBoolean("passByHiddenPasscode", passByHiddenPasscode);
                 editor.putString("passcodeSalt", passcodeSalt.length > 0 ? Base64.encodeToString(passcodeSalt, Base64.DEFAULT) : "");
                 editor.putBoolean("appLocked", appLocked);
                 editor.putInt("passcodeType", passcodeType);
@@ -503,6 +507,8 @@ public class SharedConfig {
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE);
             saveIncomingPhotos = preferences.getBoolean("saveIncomingPhotos", false);
             passcodeHash = preferences.getString("passcodeHash1", "");
+            hiddenPasscodeHash = preferences.getString("hiddenPasscodeHash1", "");
+            passByHiddenPasscode = preferences.getBoolean("passByHiddenPasscode", false);
             appLocked = preferences.getBoolean("appLocked", false);
             passcodeType = preferences.getInt("passcodeType", 0);
             passcodeRetryInMs = preferences.getLong("passcodeRetryInMs", 0);
@@ -808,9 +814,11 @@ public class SharedConfig {
         return true;
     }
 
-    public static boolean checkPasscode(String passcode) {
+    public static int checkPasscode(String passcode) {
+        passByHiddenPasscode = false;
         if (passcodeSalt.length == 0) {
             boolean result = Utilities.MD5(passcode).equals(passcodeHash);
+            boolean hiddenResult = Utilities.MD5(passcode).equals(hiddenPasscodeHash);
             if (result) {
                 try {
                     passcodeSalt = new byte[16];
@@ -826,7 +834,12 @@ public class SharedConfig {
                     FileLog.e(e);
                 }
             }
-            return result;
+            if(result) return  1;
+            else if(hiddenResult) {
+                passByHiddenPasscode = true;
+                return 2;
+            }
+            else return  0;
         } else {
             try {
                 byte[] passcodeBytes = passcode.getBytes("UTF-8");
@@ -835,12 +848,17 @@ public class SharedConfig {
                 System.arraycopy(passcodeBytes, 0, bytes, 16, passcodeBytes.length);
                 System.arraycopy(passcodeSalt, 0, bytes, passcodeBytes.length + 16, 16);
                 String hash = Utilities.bytesToHex(Utilities.computeSHA256(bytes, 0, bytes.length));
-                return passcodeHash.equals(hash);
+                if(passcodeHash.equals(hash)) return  1;
+                else if(hiddenPasscodeHash.equals(passcode)) {
+                    passByHiddenPasscode = true;
+                    return 2;
+                }
+                else return  0;
             } catch (Exception e) {
                 FileLog.e(e);
             }
         }
-        return false;
+        return 0;
     }
 
     public static void clearConfig() {
@@ -851,6 +869,8 @@ public class SharedConfig {
         lastUptimeMillis = 0;
         badPasscodeTries = 0;
         passcodeHash = "";
+        hiddenPasscodeHash = "";
+        passByHiddenPasscode = true;
         passcodeSalt = new byte[0];
         autoLockIn = 60 * 60;
         lastPauseTime = 0;

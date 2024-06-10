@@ -205,6 +205,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
             return;
         }
         SharedConfig.appLocked = true;
+        SharedConfig.passByHiddenPasscode = false;
         if (SecretMediaViewer.hasInstance() && SecretMediaViewer.getInstance().isVisible()) {
             SecretMediaViewer.getInstance().closePhoto(false, false);
         } else if (PhotoViewer.hasInstance() && PhotoViewer.getInstance().isVisible()) {

@@ -6640,6 +6640,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             return;
                         }
                         SharedConfig.appLocked = true;
+                        SharedConfig.passByHiddenPasscode = false;
                         SharedConfig.saveConfig();
                         int[] position = new int[2];
                         passcodeItem.getLocationInWindow(position);
@@ -10987,6 +10988,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
+        ArrayList<TLRPC.Dialog> array = getDialogsArray1(currentAccount,dialogsType,folderId,frozen);
+        if (SharedConfig.hiddenPasscodeHash.length() != 0 && !SharedConfig.passByHiddenPasscode)
+            for (int k = 0; k < array.size(); k++) {
+                TLRPC.Dialog dialog = array.get(k);
+                boolean hidden = MessagesController.getInstance(currentAccount).isDialogHidden(dialog.id);
+                if (hidden) array.remove(k);
+            }
+       return array;
+    }
+        @NonNull
+    public ArrayList<TLRPC.Dialog> getDialogsArray1(int currentAccount, int dialogsType, int folderId, boolean frozen) {
         if (frozen && frozenDialogsList != null) {
             return frozenDialogsList;
         }

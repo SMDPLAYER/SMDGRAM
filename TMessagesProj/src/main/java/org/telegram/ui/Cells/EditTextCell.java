@@ -12,6 +12,8 @@ import android.text.InputType;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.text.method.DigitsKeyListener;
+import android.text.method.PasswordTransformationMethod;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -95,6 +97,11 @@ public class EditTextCell extends FrameLayout {
         this(context, hint, multiline, -1);
     }
 
+    public void setNumberTypePassword(){
+        editText.setInputType(InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        editText.setKeyListener(DigitsKeyListener.getInstance("0123456789"));
+        editText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+    }
     public EditTextCell(
         Context context,
         String hint,

@@ -282,6 +282,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                                 .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
                                 .setPositiveButton(LocaleController.getString(R.string.DisablePasscodeTurnOff), (dialog, which) -> {
                                     SharedConfig.passcodeHash = "";
+                                    SharedConfig.hiddenPasscodeHash = "";
+                                    SharedConfig.passByHiddenPasscode = true;
                                     SharedConfig.appLocked = false;
                                     SharedConfig.saveConfig();
                                     getMediaDataController().buildShortcuts();
@@ -1062,7 +1064,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 onPasscodeError();
                 return;
             }
-            if (!SharedConfig.checkPasscode(password)) {
+            if (SharedConfig.checkPasscode(password)==0) {
                 SharedConfig.increaseBadPasscodeTries();
                 passwordEditText.setText("");
                 for (CodeNumberField f : codeFieldContainer.codeField) {

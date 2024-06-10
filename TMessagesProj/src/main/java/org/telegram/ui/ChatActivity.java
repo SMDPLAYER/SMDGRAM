@@ -368,6 +368,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private RecyclerListView.OnItemClickListener mentionsOnItemClickListener;
     private SuggestEmojiView suggestEmojiPanel;
     private ActionBarMenuItem.Item muteItem;
+    private ActionBarMenuItem.Item hideItem;
     private ActionBarMenuItem.Item muteItemGap;
     private ChatNotificationsPopupWrapper chatNotificationsPopupWrapper;
     private float pagedownButtonEnterProgress;
@@ -1369,6 +1370,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private final static int chat_menu_edit_text_options = -3;
     private final static int clear_history = 15;
     private final static int delete_chat = 16;
+    private final static int hide_chat = 160;
     private final static int share_contact = 17;
     private final static int mute = 18;
     private final static int report = 21;
@@ -3816,6 +3818,28 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         BulletinFactory.createMuteBulletin(ChatActivity.this, getMessagesController().isDialogMuted(dialog_id, getTopicId()), themeDelegate).show();
                     }
                 }, getResourceProvider());
+                if (SharedConfig.passByHiddenPasscode && SharedConfig.hiddenPasscodeHash.length()!=0){
+                    boolean hidden = MessagesController.getInstance(currentAccount).isDialogHidden(dialog_id);
+                    if (hidden){
+                        hideItem = headerItem.lazilyAddSubItem(hide_chat, R.drawable.msg_stories_views , LocaleController.getString("Show", R.string.Show));
+                    }else{
+                        hideItem = headerItem.lazilyAddSubItem(hide_chat, R.drawable.msg_archive_hide, LocaleController.getString("Hide", R.string.Hide));
+                    }
+
+                    hideItem.setOnClickListener(view->{
+                        boolean isHidden = MessagesController.getInstance(currentAccount).isDialogHidden(dialog_id);
+                        MessagesController.getInstance(currentAccount).hideDialog(dialog_id, getTopicId(),!isHidden);
+                        hideItemUpdate(!isHidden);
+                        if (!isHidden){
+                            Toast.makeText(context,"Successfully Hidden!",Toast.LENGTH_SHORT).show();
+                        }else{
+                            Toast.makeText(context,"Current chat is visible now!",Toast.LENGTH_SHORT).show();
+                        }
+
+                        headerItem.toggleSubMenu();
+                    });
+                }
+
                 muteItem = headerItem.lazilyAddSwipeBackItem(R.drawable.msg_mute, null, null, chatNotificationsPopupWrapper.windowLayout);
                 muteItem.setOnClickListener(view -> {
                     boolean muted = MessagesController.getInstance(currentAccount).isDialogMuted(dialog_id, getTopicId());
@@ -17976,6 +18000,15 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         if (chatNotificationsPopupWrapper != null) {
             chatNotificationsPopupWrapper.update(dialog_id, getTopicId(), null);
         }
+    }
+    private void hideItemUpdate(boolean isHidden) {
+            if (isHidden) {
+                hideItem.setText(LocaleController.getString("Show", R.string.Show));
+                hideItem.setIcon(R.drawable.msg_stories_views);
+            } else {
+                hideItem.setText(LocaleController.getString("Hide", R.string.Hide));
+                hideItem.setIcon(R.drawable.msg_archive_hide);
+            }
     }
 
     public void checkAndUpdateAvatar() {
