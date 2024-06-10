@@ -10988,14 +10988,18 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
-        ArrayList<TLRPC.Dialog> array = getDialogsArray1(currentAccount,dialogsType,folderId,frozen);
-        if (SharedConfig.hiddenPasscodeHash.length() != 0 && !SharedConfig.passByHiddenPasscode)
-            for (int k = 0; k < array.size(); k++) {
-                TLRPC.Dialog dialog = array.get(k);
+        ArrayList<TLRPC.Dialog> array1 = getDialogsArray1(currentAccount,dialogsType,folderId,frozen);
+        ArrayList<TLRPC.Dialog> newArray = new ArrayList<TLRPC.Dialog>();
+        if (SharedConfig.hiddenPasscodeHash.length() != 0 && !SharedConfig.passByHiddenPasscode) {
+            for (int k = 0; k < array1.size(); k++) {
+                TLRPC.Dialog dialog = array1.get(k);
                 boolean hidden = MessagesController.getInstance(currentAccount).isDialogHidden(dialog.id);
-                if (hidden) array.remove(k);
+                if (!hidden) newArray.add(dialog);
             }
-       return array;
+        } else {
+            newArray.addAll(array1);
+        }
+       return newArray;
     }
         @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray1(int currentAccount, int dialogsType, int folderId, boolean frozen) {
