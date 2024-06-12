@@ -412,6 +412,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private int undoViewIndex;
     private UndoView[] undoView = new UndoView[2];
     private FilterTabsView filterTabsView;
+    private PrayTimesView prayTimesView;
     private boolean askingForPermissions;
     private RLottieDrawable passcodeDrawable;
     private SearchViewPager searchViewPager;
@@ -1121,6 +1122,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             if (dialogsHintCell != null && dialogsHintCell.getVisibility() == View.VISIBLE) {
                                 h += dialogsHintCell.getMeasuredHeight();
                             }
+                            if (prayTimesView != null && prayTimesView.getVisibility() == View.VISIBLE) {
+                                h += prayTimesView.getMeasuredHeight();
+                            }
                             if (authHintCell != null && authHintCell.getVisibility() == View.VISIBLE) {
                                 h += authHintCell.getMeasuredHeight();
                             }
@@ -1130,6 +1134,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                     if (dialogsHintCell != null) {
                         h -= dialogsHintCell.height();
+                    }
+                    if (prayTimesView != null) {
+                        h -= prayTimesView.getHeight1();
                     }
                     h += actionModeAdditionalHeight;
                     if (filtersTabAnimator != null && (hasStories || (filterTabsView != null && filterTabsView.getVisibility() == VISIBLE))) {
@@ -1277,6 +1284,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     childTop += topPadding;
                     if (dialogsHintCell != null) {
                         childTop += dialogsHintCell.height();
+                    }
+                    if (prayTimesView != null) {
+                        childTop += prayTimesView.getHeight1();
                     }
                 } else if (child == dialogsHintCell || child instanceof FragmentContextView || child == authHintCell) {
                     childTop += actionBar.getMeasuredHeight();
@@ -2994,6 +3004,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         wasDrawn = false;
         pacmanAnimation = null;
         filterTabsView = null;
+        prayTimesView = null;
         selectedDialogs.clear();
 
         maximumVelocity = ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
@@ -4696,6 +4707,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 updateDialogsHint();
             });
             contentView.addView(dialogsHintCell);
+            prayTimesView = new PrayTimesView(context);
+            contentView.addView(prayTimesView);
+
         } else if (initialDialogsType == DIALOGS_TYPE_FORWARD) {
             if (commentView != null) {
                 commentView.onDestroy();
@@ -5569,6 +5583,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (dialogsHintCell != null && dialogsHintCell.getVisibility() == View.VISIBLE) {
             h += dialogsHintCell.getMeasuredHeight();
         }
+        if (prayTimesView != null && prayTimesView.getVisibility() == View.VISIBLE) {
+            h += prayTimesView.getMeasuredHeight();
+        }
         if (authHintCell != null && authHintCellVisible) {
             h += authHintCell.getMeasuredHeight();
         }
@@ -6390,6 +6407,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             dialogsHintCell.setTranslationY(totalOffset);
             totalOffset += dialogsHintCell.getMeasuredHeight() * (1f - searchAnimationProgress);
+        }
+        if (prayTimesView != null && prayTimesView.getVisibility() == View.VISIBLE) {
+            if (rightSlidingDialogContainer != null && rightSlidingDialogContainer.hasFragment()) {
+                totalOffset -= prayTimesView.getMeasuredHeight() * rightSlidingDialogContainer.openedProgress;
+            }
+            prayTimesView.setTranslationY(totalOffset + actionBar.getMeasuredHeight());
+            totalOffset += prayTimesView.getMeasuredHeight() * (1f - searchAnimationProgress);
         }
         if (authHintCell != null && authHintCell.getVisibility() == View.VISIBLE) {
             if (rightSlidingDialogContainer != null && rightSlidingDialogContainer.hasFragment()) {
