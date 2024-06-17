@@ -1,5 +1,16 @@
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
 include ':TMessagesProj'
 include ':TMessagesProj_App'
 include ':TMessagesProj_AppHuawei'
 include ':TMessagesProj_AppHockeyApp'
 include ':TMessagesProj_AppStandalone'
+dependencyResolutionManagement{
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        google()
+        maven { url 'https://developer.huawei.com/repo/' }
+        maven { url 'https://jitpack.io'}
+    }
+}

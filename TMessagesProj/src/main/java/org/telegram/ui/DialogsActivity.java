@@ -4708,6 +4708,26 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             });
             contentView.addView(dialogsHintCell);
             prayTimesView = new PrayTimesView(context);
+            prayTimesView.updateLocation();
+            prayTimesView.setValueChangeListener((oldValue) -> {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    Activity activity = getParentActivity();
+                    if (activity != null) {
+                        if (oldValue){
+                            prayTimesView.restoreLocation(getParentActivity());
+                        }else
+                        if (activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                            prayTimesView.restoreLocation(getParentActivity());
+                        }
+                        else {
+                            prayTimesView.updateLocation();
+                        }
+                    }
+                } else {
+                    prayTimesView.updateLocation();
+                }
+                return null;
+            });
             contentView.addView(prayTimesView);
 
         } else if (initialDialogsType == DIALOGS_TYPE_FORWARD) {

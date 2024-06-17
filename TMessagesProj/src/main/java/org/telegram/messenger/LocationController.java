@@ -27,6 +27,7 @@ import androidx.collection.LongSparseArray;
 
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.SQLite.SQLitePreparedStatement;
+import org.telegram.messenger.components.local.Prefs;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
@@ -552,6 +553,7 @@ public class LocationController extends BaseController implements NotificationCe
         }
         lastKnownLocation = location;
         if (lastKnownLocation != null) {
+            Prefs.INSTANCE.setLocation(location);
             AndroidUtilities.runOnUIThread(() -> NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.newLocationAvailable));
         }
     }

@@ -1,11 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.huawei.agconnect'
 
-repositories {
-    mavenCentral()
-    google()
-    maven { url 'https://developer.huawei.com/repo/' }
-}
+
 
 configurations {
     compile.exclude module: 'support-v4'

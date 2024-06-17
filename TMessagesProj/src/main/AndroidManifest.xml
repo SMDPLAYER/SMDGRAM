@@ -127,6 +127,10 @@
             android:name="org.telegram.ui.HiddenPasscodeActivity"
             android:exported="false" />
         <activity
+            android:theme="@style/Permissions.TransparentTheme"
+            android:name=".components.permissions.PermissionsActivity"
+            android:exported="false" />
+        <activity
             android:name="org.telegram.ui.LaunchActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
             android:exported="true"
