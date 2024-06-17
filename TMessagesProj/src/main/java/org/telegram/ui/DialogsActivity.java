@@ -4708,6 +4708,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             });
             contentView.addView(dialogsHintCell);
             prayTimesView = new PrayTimesView(context);
+            prayTimesView.setBackgroundColor1(Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider));
             prayTimesView.updateLocation();
             prayTimesView.setValueChangeListener((oldValue) -> {
                 if (Build.VERSION.SDK_INT >= 23) {
