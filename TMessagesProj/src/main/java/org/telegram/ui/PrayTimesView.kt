@@ -2,30 +2,36 @@ package org.telegram.ui
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Build
 import android.util.AttributeSet
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
-import com.azan.Azan
-import com.azan.Method
-import com.azan.Time
-import com.azan.astrologicalCalc.SimpleDate
-import com.google.android.exoplayer2.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.AndroidUtilities.dp
 import org.telegram.messenger.R
@@ -33,13 +39,15 @@ import org.telegram.messenger.components.local.Prefs
 import org.telegram.messenger.components.location.LocationEx
 import org.telegram.messenger.components.location.LocationEx.showDialogVerifyLocation
 import org.telegram.messenger.components.permissions.checkPermissionLocation
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.text.SimpleDateFormat
 import java.time.LocalTime
+import java.util.Calendar
 import java.util.Date
-import java.util.GregorianCalendar
 import java.util.Locale
-import java.util.TimeZone
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 
 class PrayTimesView @JvmOverloads constructor(
@@ -57,8 +65,6 @@ class PrayTimesView @JvmOverloads constructor(
 
     var latitude = 30.045411
     var longitude = 31.236735
-    var gmtOffset = 2.0
-    var isDST = 0
     init {
         // Inflate XML layout
         LayoutInflater.from(context).inflate(R.layout.view_pray_times, this, true)
@@ -90,6 +96,9 @@ class PrayTimesView @JvmOverloads constructor(
         }
     }
 
+    fun hide(hide:Boolean){
+        holderPrayTimes.isGone = hide
+    }
 
     fun setBackgroundColor1(color: Int) {
         holderPrayTimes.setBackgroundColor(color)
@@ -99,217 +108,33 @@ class PrayTimesView @JvmOverloads constructor(
         if (loc!=null){
             latitude = loc.latitude
             longitude = loc.longitude
-//            Toast.makeText(context,"Prefs" + latitude + " " + longitude,Toast.LENGTH_SHORT).show()
         } else {
             getDeviceLocation(context)
         }
-        getTimeZoneInfo(context)
-        val today = SimpleDate(GregorianCalendar())
-        val location = com.azan.astrologicalCalc.Location(latitude, longitude,gmtOffset ,isDST)
-        val azan = Azan(location, Method.EGYPT_SURVEY)
-        val prayerTimes = azan.getPrayerTimes(today)
-        val imsaak = azan.getImsaak(today)
-
-        System.currentTimeMillis()
-
-        findViewById<TextView>(R.id.tvTimeFajr).text = getTime(prayerTimes.fajr())
-        findViewById<TextView>(R.id.tvTimeMorning).text = getTime(prayerTimes.shuruq())
-        findViewById<TextView>(R.id.tvTimeDhuhur).text = getTime(prayerTimes.thuhr())
-        findViewById<TextView>(R.id.tvTimeAsr).text = getTime(prayerTimes.assr())
-        findViewById<TextView>(R.id.tvTimeMagrib).text = getTime(prayerTimes.maghrib())
-        findViewById<TextView>(R.id.tvTimeIsha).text = getTime(prayerTimes.ishaa())
-
-        val currentTime = LocalTime.now()
-        val fajr = LocalTime.parse(getTime(prayerTimes.fajr()))
-        val shuruq = LocalTime.parse(getTime(prayerTimes.shuruq()))
-        val thuhr = LocalTime.parse(getTime(prayerTimes.thuhr()))
-        val assr = LocalTime.parse(getTime(prayerTimes.assr()))
-        val maghrib = LocalTime.parse(getTime(prayerTimes.maghrib()))
-        val ishaa = LocalTime.parse(getTime(prayerTimes.ishaa()))
-        when {
-            currentTime.isBefore(fajr) -> {
-                findViewById<TextView>(R.id.tvTitle1).text="Isha"
-                findViewById<TextView>(R.id.tvTime1).text = getTime(prayerTimes.ishaa())
-                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_isha)
-                val colorInt = Color.parseColor("#EB6FFF")
-                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_isha)
-
-                findViewById<TextView>(R.id.tvTitle2).text="Fajr"
-                findViewById<TextView>(R.id.tvTime2).text = getTime(prayerTimes.fajr())
-                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_fajr)
-                val colorInt2 = Color.parseColor("#5BA8EF").toInt()
-                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_fajr)
-            }
-            currentTime.isBefore(shuruq) -> {
-                findViewById<TextView>(R.id.tvTitle1).text="Fajr"
-                findViewById<TextView>(R.id.tvTime1).text = getTime(prayerTimes.fajr())
-                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_fajr)
-                val colorInt = Color.parseColor("#5BA8EF")
-                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_fajr)
+        // Launch a coroutine to perform network operation on a background thread
+        CoroutineScope(Dispatchers.IO).launch {
+            val today = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+            val tomorrow = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }.time)
 
 
-                findViewById<TextView>(R.id.tvTitle2).text="Morning"
-                findViewById<TextView>(R.id.tvTime2).text = getTime(prayerTimes.shuruq())
-                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_sunrise)
-                val colorInt2 = Color.parseColor("#99DDA8")
-                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_sunrise)
-
-            }
-            currentTime.isBefore(thuhr) -> {
-                findViewById<TextView>(R.id.tvTitle1).text="Morning"
-                findViewById<TextView>(R.id.tvTime1).text = getTime(prayerTimes.shuruq())
-                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_sunrise)
-                val colorInt = Color.parseColor("#99DDA8")
-                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_sunrise)
-
-                findViewById<TextView>(R.id.tvTitle2).text="Dhuhur"
-                findViewById<TextView>(R.id.tvTime2).text = getTime(prayerTimes.thuhr())
-                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_zuhr)
-                val colorInt2 = Color.parseColor("#AAE55F")
-                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_zuhr)
-            }
-            currentTime.isBefore(assr) -> {
-                findViewById<TextView>(R.id.tvTitle1).text="Dhuhur"
-                findViewById<TextView>(R.id.tvTime1).text = getTime(prayerTimes.thuhr())
-                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_zuhr)
-                val colorInt = Color.parseColor("#AAE55F")
-                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_zuhr)
-
-
-                findViewById<TextView>(R.id.tvTitle2).text="Asr"
-                findViewById<TextView>(R.id.tvTime2).text = getTime(prayerTimes.assr())
-                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_asr)
-                val colorInt2 = Color.parseColor("#EBE555")
-                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_asr)
-
-            }
-            currentTime.isBefore(maghrib) -> {
-                findViewById<TextView>(R.id.tvTitle1).text="Asr"
-                findViewById<TextView>(R.id.tvTime1).text = getTime(prayerTimes.assr())
-                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_asr)
-                val colorInt = Color.parseColor("#EBE555")
-                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_asr)
-
-
-                findViewById<TextView>(R.id.tvTitle2).text="Maghrib"
-                findViewById<TextView>(R.id.tvTime2).text = getTime(prayerTimes.maghrib())
-                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_magrib)
-                val colorInt2 = Color.parseColor("#F69D6B")
-                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_magrib)
-
-            }
-            currentTime.isBefore(ishaa) -> {
-                findViewById<TextView>(R.id.tvTitle1).text="Maghrib"
-                findViewById<TextView>(R.id.tvTime1).text = getTime(prayerTimes.maghrib())
-                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_magrib)
-                val colorInt = Color.parseColor("#F69D6B")
-                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
-                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_magrib)
-
-
-                findViewById<TextView>(R.id.tvTitle2).text="Isha"
-                findViewById<TextView>(R.id.tvTime2).text = getTime(prayerTimes.ishaa())
-                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_isha)
-                val colorInt2 = Color.parseColor("#EB6FFF")
-                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
-                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_isha)
-
-            }
-        }
-
-        requestLayout()
-    }
-    fun getTime(time: Time):String {
-        val _hour =time.hour
-        var hour =_hour.toString()
-
-        val _minute =time.minute
-        var minute =_minute.toString()
-
-        if (_hour<9) hour = "0$hour"
-        if (_minute<9) minute = "0$_minute"
-
-        val compareTime = "$hour:$minute"
-
-
-        return compareTime
-    }
-
-    private suspend fun getUtcOffset(context: Context, latitude: Double, longitude: Double): Double? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val geocoder = Geocoder(context, Locale.getDefault())
-                val addresses = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    suspendCoroutine<List<android.location.Address>> { continuation ->
-                        geocoder.getFromLocation(latitude, longitude, 1, object : Geocoder.GeocodeListener {
-
-                            override fun onGeocode(addresses: MutableList<android.location.Address>) {
-                                continuation.resume(addresses)
-                            }
-
-                            override fun onError(errorMessage: String?) {
-                                continuation.resume(emptyList())
-                            }
-                        })
-                    }
-                } else {
-                    geocoder.getFromLocation(latitude, longitude, 1)
+            val todayResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$today?latitude=$latitude&longitude=$longitude&method=3")
+            val tomorrowResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$today?latitude=$latitude&longitude=$longitude&method=3")
+            todayResponse?.let {
+                // Handle the JSON response on the main thread
+                withContext(Dispatchers.Main) {
+                    handleJsonResponse(it,today, true)
                 }
-
-                if (addresses.isNullOrEmpty()) return@withContext null
-
-                val address = addresses[0]
-                val timeZone = TimeZone.getDefault() // Default timezone in case of failure to get accurate timezone
-
-                // Attempt to get the accurate timezone
-                if (address.hasLatitude() && address.hasLongitude()) {
-                    val geocoderTimeZone = TimeZone.getTimeZone(Geocoder(context, Locale.getDefault()).getFromLocation(address.latitude, address.longitude, 1)
-                        ?.get(0)?.locality)
-                    if (!geocoderTimeZone.id.equals("GMT", true)) {
-                        timeZone.id = geocoderTimeZone.id
-                    }
+            }
+            tomorrowResponse?.let {
+                // Handle the JSON response on the main thread
+                withContext(Dispatchers.Main) {
+                    handleJsonResponse(it,tomorrow,false)
                 }
-
-                val offsetInMillis = timeZone.getOffset(Date().time)
-
-                gmtOffset = offsetInMillis / 3600000.0 // Convert milliseconds to hours
-                isDST = if (timeZone.inDaylightTime(Date())) 1 else 0
-                println("GMT Offset: $gmtOffset hours")
-                println("DST in effect: $isDST")
-                gmtOffset
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
             }
         }
+
     }
-    private fun getTimeZoneInfo(context: Context) {
-        runBlocking {
-            getUtcOffset(context,latitude,longitude)
-        }
-    }
+
 
 
     fun restoreLocation(activity: Activity?){
@@ -394,8 +219,309 @@ class PrayTimesView @JvmOverloads constructor(
         }
     }
 
+    private suspend fun getJsonResponse(urlString: String): String? {
+        var urlConnection: HttpURLConnection? = null
+        var reader: BufferedReader? = null
+        var jsonResponse: String? = null
+
+        try {
+            val url = URL(urlString)
+            urlConnection = url.openConnection() as HttpURLConnection
+            urlConnection.requestMethod = "GET"
+            urlConnection.connect()
+
+            val inputStream = urlConnection.inputStream
+            reader = BufferedReader(InputStreamReader(inputStream))
+            val stringBuilder = StringBuilder()
+            var line: String?
+
+            while (reader.readLine().also { line = it } != null) {
+                stringBuilder.append(line)
+            }
+
+            jsonResponse = stringBuilder.toString()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            urlConnection?.disconnect()
+            reader?.close()
+        }
+        return jsonResponse
+    }
+
+    fun updateTimes(
+        fajr:String,
+        sunrise:String,
+        dhuhr:String,
+        asr:String,
+        maghrib:String,
+        isha:String,
+    ){
+        findViewById<TextView>(R.id.tvTimeFajr).text = fajr
+        findViewById<TextView>(R.id.tvTimeMorning).text = sunrise
+        findViewById<TextView>(R.id.tvTimeDhuhur).text = dhuhr
+        findViewById<TextView>(R.id.tvTimeAsr).text = asr
+        findViewById<TextView>(R.id.tvTimeMagrib).text = maghrib
+        findViewById<TextView>(R.id.tvTimeIsha).text = isha
+
+        val currentTime = LocalTime.now()
+        val fajrTime = LocalTime.parse(fajr)
+        val sunriseTime = LocalTime.parse(sunrise)
+        val dhuhrTime = LocalTime.parse(dhuhr)
+        val asrTime = LocalTime.parse(asr)
+        val maghribTime = LocalTime.parse(maghrib)
+        val ishaTime = LocalTime.parse(isha)
+        when {
+            currentTime.isBefore(fajrTime) -> {
+                findViewById<TextView>(R.id.tvTitle1).text="Isha"
+                findViewById<TextView>(R.id.tvTime1).text = isha
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_isha)
+                val colorInt = Color.parseColor("#EB6FFF")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_isha)
+
+                findViewById<TextView>(R.id.tvTitle2).text="Fajr"
+                findViewById<TextView>(R.id.tvTime2).text = fajr
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_fajr)
+                val colorInt2 = Color.parseColor("#5BA8EF").toInt()
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_fajr)
+            }
+            currentTime.isBefore(sunriseTime) -> {
+                findViewById<TextView>(R.id.tvTitle1).text="Fajr"
+                findViewById<TextView>(R.id.tvTime1).text = fajr
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_fajr)
+                val colorInt = Color.parseColor("#5BA8EF")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_fajr)
+
+
+                findViewById<TextView>(R.id.tvTitle2).text="Morning"
+                findViewById<TextView>(R.id.tvTime2).text = sunrise
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_sunrise)
+                val colorInt2 = Color.parseColor("#99DDA8")
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_sunrise)
+
+            }
+            currentTime.isBefore(dhuhrTime) -> {
+                findViewById<TextView>(R.id.tvTitle1).text="Morning"
+                findViewById<TextView>(R.id.tvTime1).text = sunrise
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_sunrise)
+                val colorInt = Color.parseColor("#99DDA8")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_sunrise)
+
+                findViewById<TextView>(R.id.tvTitle2).text="Dhuhur"
+                findViewById<TextView>(R.id.tvTime2).text = dhuhr
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_zuhr)
+                val colorInt2 = Color.parseColor("#AAE55F")
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_zuhr)
+            }
+            currentTime.isBefore(asrTime) -> {
+                findViewById<TextView>(R.id.tvTitle1).text="Dhuhur"
+                findViewById<TextView>(R.id.tvTime1).text = dhuhr
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_zuhr)
+                val colorInt = Color.parseColor("#AAE55F")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_zuhr)
+
+
+                findViewById<TextView>(R.id.tvTitle2).text="Asr"
+                findViewById<TextView>(R.id.tvTime2).text = asr
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_asr)
+                val colorInt2 = Color.parseColor("#EBE555")
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_asr)
+
+            }
+            currentTime.isBefore(maghribTime) -> {
+                findViewById<TextView>(R.id.tvTitle1).text="Asr"
+                findViewById<TextView>(R.id.tvTime1).text = asr
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_asr)
+                val colorInt = Color.parseColor("#EBE555")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_asr)
+
+
+                findViewById<TextView>(R.id.tvTitle2).text="Maghrib"
+                findViewById<TextView>(R.id.tvTime2).text = maghrib
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_magrib)
+                val colorInt2 = Color.parseColor("#F69D6B")
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_magrib)
+
+            }
+            currentTime.isBefore(ishaTime) -> {
+                findViewById<TextView>(R.id.tvTitle1).text="Maghrib"
+                findViewById<TextView>(R.id.tvTime1).text = maghrib
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_magrib)
+                val colorInt = Color.parseColor("#F69D6B")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_magrib)
+
+
+                findViewById<TextView>(R.id.tvTitle2).text="Isha"
+                findViewById<TextView>(R.id.tvTime2).text = isha
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_isha)
+                val colorInt2 = Color.parseColor("#EB6FFF")
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_isha)
+
+            }
+        }
+
+        requestLayout()
+    }
+    private fun handleJsonResponse(jsonResponse: String, dateKey: String,isToday:Boolean) {
+        try {
+            Log.e("TTT",jsonResponse)
+            // Parse the JSON response
+            val jsonObject = JSONObject(jsonResponse)
+            val data = jsonObject.getJSONObject("data")
+            val timings = data.getJSONObject("timings")
+
+            val fajr = timings.getString("Fajr")
+            val sunrise = timings.getString("Sunrise")
+            val dhuhr = timings.getString("Dhuhr")
+            val asr = timings.getString("Asr")
+            val maghrib = timings.getString("Maghrib")
+            val isha = timings.getString("Isha")
+            // Handle the JSON object as needed
+
+            val prayerTimes = mapOf(
+                "Fajr" to fajr,
+                "Sunrise" to sunrise,
+                "Dhuhr" to dhuhr,
+                "Asr" to asr,
+                "Maghrib" to maghrib,
+                "Isha" to isha
+            )
+            if (isToday) updateTimes(fajr,sunrise,dhuhr,asr,maghrib,isha)
+            // Schedule alarms for the prayer times
+            schedulePrayerAlarms(context, prayerTimes, dateKey)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
     fun getHeight1(): Int {
         return dp(height0)
     }
 
+
+}
+
+
+
+
+fun schedulePrayerAlarms(context: Context, timings: Map<String, String>, dateKey: String) {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("prayer_times", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    timings.forEach { (prayerName, prayerTime) ->
+        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val prayerCalendar = Calendar.getInstance().apply {
+            time = sdf.parse(prayerTime) ?: return@forEach
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            // Adjust the time to the specified date
+            set(Calendar.YEAR, dateKey.substring(0, 4).toInt())
+            set(Calendar.MONTH, dateKey.substring(5, 7).toInt() - 1)
+            set(Calendar.DAY_OF_MONTH, dateKey.substring(8).toInt())
+        }
+
+        val currentTime = Calendar.getInstance()
+        if (prayerCalendar.before(currentTime)) return@forEach
+
+        val prayerKey = "$dateKey-$prayerName"
+        val prayerIntent = Intent(context, PrayerAlarmReceiver::class.java).apply {
+            putExtra("prayer_name", prayerName)
+            putExtra("prayer_time", prayerTime)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            prayerKey.hashCode(),
+            prayerIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Cancel existing alarm if it exists
+        alarmManager.cancel(pendingIntent)
+
+        // Schedule new alarm
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                prayerCalendar.timeInMillis,
+                pendingIntent
+            )
+        }
+
+        // Update shared preferences
+        editor.putBoolean(prayerKey, true)
+    }
+    editor.apply()
+}
+
+class PrayerAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+        val prayerName = intent?.getStringExtra("prayer_name") ?: return
+        val prayerTime = intent.getStringExtra("prayer_time") ?: return
+
+        if (context != null) {
+            NotificationUtil.showNotification(
+                context,
+                "Prayer Time: $prayerName",
+                "It's time for $prayerName prayer at $prayerTime"
+            )
+        }
+    }
+}
+
+object NotificationUtil {
+    private const val CHANNEL_ID = "prayer_times_channel"
+    private const val CHANNEL_NAME = "Prayer Times"
+    private const val CHANNEL_DESC = "Notifications for prayer times"
+
+    fun createNotificationChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = CHANNEL_DESC
+            }
+            val notificationManager: NotificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    fun showNotification(context: Context, title: String, message: String) {
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.msg_mini_autodelete_timer) // Replace with your own icon
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(System.currentTimeMillis().toInt(), builder.build())
+        }
+    }
 }
