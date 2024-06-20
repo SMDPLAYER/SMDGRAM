@@ -3072,6 +3072,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public void onSearchExpand() {
+                if (prayTimesView != null) prayTimesView.hide(true);
                 searching = true;
                 if (switchItem != null) {
                     switchItem.setVisibility(View.GONE);
@@ -3135,6 +3136,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public void onSearchCollapse() {
+                if (prayTimesView != null) prayTimesView.hide(false);
                 searching = false;
                 searchWas = false;
                 if (viewPages[0] != null) {
