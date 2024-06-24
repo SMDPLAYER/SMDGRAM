@@ -15,6 +15,7 @@ import android.graphics.Color
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.AttributeSet
 import android.util.Log
@@ -103,6 +104,20 @@ class PrayTimesView @JvmOverloads constructor(
                 val intent = Intent().apply {
                     action = Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
                 }
+                context.startActivity(intent)
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                    if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        context.startActivity(intent)
+                    }
+                }
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                 context.startActivity(intent)
             }
         }

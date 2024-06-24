@@ -77,13 +77,17 @@ class PrayChangeTimeActivity : AppCompatActivity() {
                 setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite))
                 setText(name, true)
                 layoutParams = LinearLayout.LayoutParams(
-                    0,
+                    LayoutParams.WRAP_CONTENT,
                     LayoutParams.WRAP_CONTENT,
                     1.0f
                 )
             }
             addView(textCell)
             val textCell1 = TextCell(this@PrayChangeTimeActivity).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LayoutParams.WRAP_CONTENT,
+                    LayoutParams.WRAP_CONTENT,
+                )
                 setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite))
                 setText("0 min", true)
             }
