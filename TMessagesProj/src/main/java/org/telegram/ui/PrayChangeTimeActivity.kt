@@ -89,7 +89,7 @@ class PrayChangeTimeActivity : AppCompatActivity() {
                     LayoutParams.WRAP_CONTENT,
                 )
                 setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite))
-                setText("0 min", true)
+                setText("$selected min", true)
             }
             addView(textCell1)
             setOnClickListener {
