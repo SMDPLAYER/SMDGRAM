@@ -8960,4 +8960,6 @@
     <string name="ChromeCrashTitle">Aw, Snap!</string>
     <string name="ChromeCrashMessage">Something went wrong while displaying this webpage.\n\nIf it occurs frequently, consider updating **Android WebView**.</string>
     <string name="HiddenPasscode">Hidden Chat Passcode Lock</string>
+    <string name="PrayTimes">Pray times</string>
+    <string name="PraySettings">Pray settings</string>
 </resources>

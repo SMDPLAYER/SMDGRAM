@@ -4723,6 +4723,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             prayTimesView.restoreLocation(getParentActivity());
                         }
                         else {
+                            prayTimesView.checkAlarmPermission();
                             prayTimesView.updateLocation();
                         }
                     }

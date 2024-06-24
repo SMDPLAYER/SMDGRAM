@@ -25,13 +25,13 @@ fun Fragment.checkPermission(permission: String, granted: () -> Unit) {
     })
 }
 
-fun checkPermission(context: Context, permission: String, granted: () -> Unit, denied: () -> Unit) {
+fun checkPermission(context: Context, permission: String, denied: () -> Unit, granted: () -> Unit) {
     val mContext = context ?: return
     val options =  Permissions.Options()
 //    val options = Permissions.Options()
-    options.setSettingsDialogMessage("Вы навсегда запретили приложению доступ к хранилишу! Разрешите приложению использовать ваши Файлы и медиа в настройках!")
-    options.setSettingsText("Настройки")
-    options.setSettingsDialogTitle("Внимание!")
+    options.setSettingsDialogMessage("Need Permission for Alarm")
+    options.setSettingsText("Settings")
+    options.setSettingsDialogTitle("Attention!")
     options.setCreateNewTask(true)
     Permissions.check(mContext, arrayOf(permission), null, options, object : PermissionHandler() {
         override fun onGranted() {

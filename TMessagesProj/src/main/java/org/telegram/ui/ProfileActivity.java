@@ -549,6 +549,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private int liteModeRow;
     private int stickersRow;
     private int devicesRow;
+    private int prayTimesRow;
     private int devicesSectionRow;
     private int helpHeaderRow;
     private int questionRow;
@@ -3832,6 +3833,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 presentFragment(new LiteModeSettingsActivity());
             } else if (position == devicesRow) {
                 presentFragment(new SessionsActivity(0));
+            } else if (position == prayTimesRow) {
+                Intent myIntent = new Intent(getParentActivity(), PraySettingsActivity.class);
+                getParentActivity().startActivity(myIntent);
             } else if (position == questionRow) {
                 showDialog(AlertsCreator.createSupportAlert(ProfileActivity.this, resourcesProvider));
             } else if (position == faqRow) {
@@ -8474,6 +8478,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         liteModeRow = -1;
         stickersRow = -1;
         devicesRow = -1;
+        prayTimesRow = -1;
         devicesSectionRow = -1;
         helpHeaderRow = -1;
         questionRow = -1;
@@ -8598,6 +8603,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     filtersRow = rowCount++;
                 }
                 devicesRow = rowCount++;
+                prayTimesRow = rowCount++;
                 languageRow = rowCount++;
                 devicesSectionRow = rowCount++;
                 if (!getMessagesController().premiumFeaturesBlocked()) {
@@ -11146,6 +11152,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         textCell.setText("Switch Backend", false);
                     } else if (position == devicesRow) {
                         textCell.setTextAndIcon(LocaleController.getString("Devices", R.string.Devices), R.drawable.msg2_devices, true);
+                    } else if (position == prayTimesRow) {
+                        textCell.setTextAndIcon(LocaleController.getString("Pray Times", R.string.PrayTimes), R.drawable.img_pray_times_settings, true);
                     } else if (position == setAvatarRow) {
                         cellCameraDrawable.setCustomEndFrame(86);
                         cellCameraDrawable.setCurrentFrame(85, false);
@@ -11445,7 +11453,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return position == notificationRow || position == numberRow || position == privacyRow ||
                         position == languageRow || position == setUsernameRow || position == bioRow ||
                         position == versionRow || position == dataRow || position == chatRow ||
-                        position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
+                        position == questionRow || position == devicesRow|| position == prayTimesRow || position == filtersRow || position == stickersRow ||
                         position == faqRow || position == policyRow || position == sendLogsRow || position == sendLastLogsRow ||
                         position == clearLogsRow || position == switchBackendRow || position == setAvatarRow ||
                         position == addToGroupButtonRow || position == premiumRow || position == premiumGiftingRow ||
@@ -11489,7 +11497,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     position == addMemberRow || position == joinRow || position == unblockRow ||
                     position == sendMessageRow || position == notificationRow || position == privacyRow ||
                     position == languageRow || position == dataRow || position == chatRow ||
-                    position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
+                    position == questionRow || position == devicesRow || position == prayTimesRow || position == filtersRow || position == stickersRow ||
                     position == faqRow || position == policyRow || position == sendLogsRow || position == sendLastLogsRow ||
                     position == clearLogsRow || position == switchBackendRow || position == setAvatarRow || position == addToGroupButtonRow ||
                     position == addToContactsRow || position == liteModeRow || position == premiumGiftingRow || position == businessRow) {
@@ -12782,6 +12790,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             put(++pointer, filtersRow, sparseIntArray);
             put(++pointer, stickersRow, sparseIntArray);
             put(++pointer, devicesRow, sparseIntArray);
+            put(++pointer, prayTimesRow, sparseIntArray);
             put(++pointer, devicesSectionRow, sparseIntArray);
             put(++pointer, helpHeaderRow, sparseIntArray);
             put(++pointer, questionRow, sparseIntArray);

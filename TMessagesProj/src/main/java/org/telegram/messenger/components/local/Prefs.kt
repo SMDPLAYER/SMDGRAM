@@ -38,6 +38,34 @@ object Prefs {
         get() = preferences.getString("mLocation", "") ?: ""
         set(value) = preferences.edit { it.putString("mLocation", value) }
 
+     var prayCalculationMethod: Int
+        get() = preferences.getInt("prayCalculationmethod", 2)
+        set(value) = preferences.edit { it.putInt("prayCalculationmethod", value) }
+
+
+     var prayNotificationsBlockList: String
+        get() = preferences.getString("prayFajrMuted", "")?:""
+        set(value) = preferences.edit { it.putString("prayFajrMuted", value) }
+
+     var addTimeFajr: Int
+        get() = preferences.getInt("addTimeFajr", 0)?:0
+        set(value) = preferences.edit { it.putInt("addTimeFajr", value) }
+     var addTimeMorning: Int
+        get() = preferences.getInt("addTimeMorning", 0)?:0
+        set(value) = preferences.edit { it.putInt("addTimeMorning", value) }
+     var addTimeDhuhur: Int
+        get() = preferences.getInt("addTimeDhuhur", 0)?:0
+        set(value) = preferences.edit { it.putInt("addTimeDhuhur", value) }
+     var addTimeAsr: Int
+        get() = preferences.getInt("addTimeAsr", 0)?:0
+        set(value) = preferences.edit { it.putInt("addTimeAsr", value) }
+     var addTimeMaghrib: Int
+        get() = preferences.getInt("addTimeMaghrib", 0)?:0
+        set(value) = preferences.edit { it.putInt("addTimeMaghrib", value) }
+     var addTimeIsha: Int
+        get() = preferences.getInt("addTimeIsha", 0)?:0
+        set(value) = preferences.edit { it.putInt("addTimeIsha", value) }
+
 
 
     fun setLocation(loc: Location) {

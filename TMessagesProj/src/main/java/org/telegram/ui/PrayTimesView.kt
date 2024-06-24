@@ -13,7 +13,9 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
@@ -38,6 +40,9 @@ import org.telegram.messenger.R
 import org.telegram.messenger.components.local.Prefs
 import org.telegram.messenger.components.location.LocationEx
 import org.telegram.messenger.components.location.LocationEx.showDialogVerifyLocation
+import org.telegram.messenger.components.notifications.NotificationUtil
+import org.telegram.messenger.components.notifications.schedulePrayerAlarms
+import org.telegram.messenger.components.permissions.checkPermission
 import org.telegram.messenger.components.permissions.checkPermissionLocation
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -71,7 +76,11 @@ class PrayTimesView @JvmOverloads constructor(
         holderPrayTimes = findViewById(R.id.holderPrayTimes)
         miniLayout = findViewById(R.id.miniLayout)
         bigLayout = findViewById(R.id.bigLayout)
+        NotificationUtil.createNotificationChannel(context)
         holderPrayTimes.setOnClickListener {
+
+            // Create notification channel
+
             valueChangeListener?.invoke(Prefs.getLocation()==null)
             val lp1 = holderPrayTimes.layoutParams
 
@@ -88,6 +97,16 @@ class PrayTimesView @JvmOverloads constructor(
         }
     }
     var valueChangeListener: ((Boolean) -> Unit)? = null
+    fun checkAlarmPermission(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()) {
+                val intent = Intent().apply {
+                    action = Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
+                }
+                context.startActivity(intent)
+            }
+        }
+    }
     fun updateLocation(){
         try {
             update()
@@ -113,24 +132,28 @@ class PrayTimesView @JvmOverloads constructor(
         }
         // Launch a coroutine to perform network operation on a background thread
         CoroutineScope(Dispatchers.IO).launch {
+            val methodId = Prefs.prayCalculationMethod
             val today = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
             val tomorrow = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }.time)
+            val yesterday = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.time)
 
 
-            val todayResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$today?latitude=$latitude&longitude=$longitude&method=3")
-            val tomorrowResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$today?latitude=$latitude&longitude=$longitude&method=3")
-            todayResponse?.let {
-                // Handle the JSON response on the main thread
-                withContext(Dispatchers.Main) {
-                    handleJsonResponse(it,today, true)
+            val tune = "0,${Prefs.addTimeFajr},${Prefs.addTimeMorning},${Prefs.addTimeDhuhur},${Prefs.addTimeAsr},0,${Prefs.addTimeMaghrib},${Prefs.addTimeIsha},0"
+            val todayResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$today?latitude=$latitude&longitude=$longitude&method=$methodId&tune=$tune")
+            val tomorrowResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$tomorrow?latitude=$latitude&longitude=$longitude&method=$methodId&tune=$tune")
+            val yesterdayResponse = getJsonResponse("https://api.aladhan.com/v1/timings/$yesterday?latitude=$latitude&longitude=$longitude&method=$methodId&tune=$tune")
+            todayResponse?.let {todayResult->
+                tomorrowResponse?.let {tomorrowResult->
+                    yesterdayResponse?.let {yesterdayResult->
+                        // Handle the JSON response on the main thread
+                        withContext(Dispatchers.Main) {
+                            handleJsonResponse(todayResponse,tomorrowResponse,yesterdayResponse,today,tomorrow,yesterday)
+                        }
+                    }
+
                 }
             }
-            tomorrowResponse?.let {
-                // Handle the JSON response on the main thread
-                withContext(Dispatchers.Main) {
-                    handleJsonResponse(it,tomorrow,false)
-                }
-            }
+
         }
 
     }
@@ -256,6 +279,8 @@ class PrayTimesView @JvmOverloads constructor(
         asr:String,
         maghrib:String,
         isha:String,
+        fajrTomorrow:String,
+        ishaYesterday:String,
     ){
         findViewById<TextView>(R.id.tvTimeFajr).text = fajr
         findViewById<TextView>(R.id.tvTimeMorning).text = sunrise
@@ -274,7 +299,7 @@ class PrayTimesView @JvmOverloads constructor(
         when {
             currentTime.isBefore(fajrTime) -> {
                 findViewById<TextView>(R.id.tvTitle1).text="Isha"
-                findViewById<TextView>(R.id.tvTime1).text = isha
+                findViewById<TextView>(R.id.tvTime1).text = ishaYesterday
                 findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_isha)
                 val colorInt = Color.parseColor("#EB6FFF")
                 findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt)
@@ -382,37 +407,70 @@ class PrayTimesView @JvmOverloads constructor(
                 findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_isha)
 
             }
+            else-> {
+                findViewById<TextView>(R.id.tvTitle1).text="Isha"
+                findViewById<TextView>(R.id.tvTime1).text = isha
+                findViewById<ImageView>(R.id.imgSun1).setImageResource(R.drawable.ic_pray_time_isha)
+                val colorInt1 = Color.parseColor("#EB6FFF")
+                findViewById<TextView>(R.id.tvTitle1).setTextColor(colorInt1)
+                findViewById<TextView>(R.id.tvTime1).setTextColor(colorInt1)
+                findViewById<TextView>(R.id.tvTime1).setBackgroundResource(R.drawable.ic_pray_time_bg_isha)
+
+                findViewById<TextView>(R.id.tvTitle2).text="Fajr"
+                findViewById<TextView>(R.id.tvTime2).text = fajrTomorrow
+                findViewById<ImageView>(R.id.imgSun2).setImageResource(R.drawable.ic_pray_time_fajr)
+                val colorInt2 = Color.parseColor("#5BA8EF").toInt()
+                findViewById<TextView>(R.id.tvTitle2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setTextColor(colorInt2)
+                findViewById<TextView>(R.id.tvTime2).setBackgroundResource(R.drawable.ic_pray_time_bg_fajr)
+
+            }
         }
 
         requestLayout()
     }
-    private fun handleJsonResponse(jsonResponse: String, dateKey: String,isToday:Boolean) {
+    private fun handleJsonResponse(todayResult: String, tomorrowResult: String,yesterdayResult:String,today:String,tomorrow:String,yesterday:String) {
         try {
-            Log.e("TTT",jsonResponse)
+            Log.e("TTT_TODAY",todayResult)
+            Log.e("TTT_TOMORROW",tomorrowResult)
+            Log.e("TTT_YESTERDAY",yesterdayResult)
             // Parse the JSON response
-            val jsonObject = JSONObject(jsonResponse)
-            val data = jsonObject.getJSONObject("data")
-            val timings = data.getJSONObject("timings")
+            val todayResponse = JSONObject(todayResult).getJSONObject("data").getJSONObject("timings")
+            val tomorrowResponse = JSONObject(tomorrowResult).getJSONObject("data").getJSONObject("timings")
+            val yesterdayResponse = JSONObject(yesterdayResult).getJSONObject("data").getJSONObject("timings")
 
-            val fajr = timings.getString("Fajr")
-            val sunrise = timings.getString("Sunrise")
-            val dhuhr = timings.getString("Dhuhr")
-            val asr = timings.getString("Asr")
-            val maghrib = timings.getString("Maghrib")
-            val isha = timings.getString("Isha")
+
+
+            val fajrTomorrow = tomorrowResponse.getString("Fajr")
+            val fajr = todayResponse.getString("Fajr")
+            val sunrise = todayResponse.getString("Sunrise")
+            val dhuhr = todayResponse.getString("Dhuhr")
+            val asr = todayResponse.getString("Asr")
+            val maghrib = todayResponse.getString("Maghrib")
+            val isha = todayResponse.getString("Isha")
+            val ishaYesterday = yesterdayResponse.getString("Isha")
             // Handle the JSON object as needed
 
-            val prayerTimes = mapOf(
-                "Fajr" to fajr,
-                "Sunrise" to sunrise,
-                "Dhuhr" to dhuhr,
-                "Asr" to asr,
-                "Maghrib" to maghrib,
-                "Isha" to isha
+            val prayerTimesToday = mapOf(
+                "Fajr" to todayResponse.getString("Fajr"),
+                "Sunrise" to todayResponse.getString("Sunrise"),
+                "Dhuhr" to todayResponse.getString("Dhuhr"),
+                "Asr" to todayResponse.getString("Asr"),
+                "Maghrib" to todayResponse.getString("Maghrib"),
+                "Isha" to todayResponse.getString("Isha"),
             )
-            if (isToday) updateTimes(fajr,sunrise,dhuhr,asr,maghrib,isha)
+            val prayerTimesTomorrow = mapOf(
+                "Fajr" to tomorrowResponse.getString("Fajr"),
+                "Sunrise" to tomorrowResponse.getString("Sunrise"),
+                "Dhuhr" to tomorrowResponse.getString("Dhuhr"),
+                "Asr" to tomorrowResponse.getString("Asr"),
+                "Maghrib" to tomorrowResponse.getString("Maghrib"),
+                "Isha" to tomorrowResponse.getString("Isha"),
+            )
+            updateTimes(fajr,sunrise,dhuhr,asr,maghrib,isha,fajrTomorrow,ishaYesterday)
             // Schedule alarms for the prayer times
-            schedulePrayerAlarms(context, prayerTimes, dateKey)
+            schedulePrayerAlarms(context, prayerTimesToday, today)
+            schedulePrayerAlarms(context, prayerTimesTomorrow, tomorrow)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -427,101 +485,105 @@ class PrayTimesView @JvmOverloads constructor(
 
 
 
-fun schedulePrayerAlarms(context: Context, timings: Map<String, String>, dateKey: String) {
-    val sharedPreferences: SharedPreferences = context.getSharedPreferences("prayer_times", Context.MODE_PRIVATE)
-    val editor = sharedPreferences.edit()
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+//fun schedulePrayerAlarms(context: Context, timings: Map<String, String>, dateKey: String) {
+//    val sharedPreferences: SharedPreferences = context.getSharedPreferences("prayer_times", Context.MODE_PRIVATE)
+//    val editor = sharedPreferences.edit()
+//    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+//
+//    timings.forEach { (prayerName, prayerTime) ->
+//        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+//        val prayerCalendar = Calendar.getInstance().apply {
+//            time = sdf.parse(prayerTime) ?: return@forEach
+//            set(Calendar.SECOND, 0)
+//            set(Calendar.MILLISECOND, 0)
+//            // Adjust the time to the specified date
+//
+//            set(Calendar.YEAR, dateKey.substringAfterLast("-").toInt())
+//            set(Calendar.MONTH, dateKey.substring(3, 5).toInt() - 1)
+//            set(Calendar.DAY_OF_MONTH, dateKey.substringBefore("-").toInt())
+//        }
+//
+//        val currentTime = Calendar.getInstance()
+//        if (prayerCalendar.before(currentTime)) return@forEach
+//
+//        val prayerKey = "$dateKey-$prayerName"
+//        val prayerIntent = Intent(context, PrayerAlarmReceiver::class.java).apply {
+//            putExtra("prayer_name", prayerName)
+//            putExtra("prayer_time", prayerTime)
+//        }
+//
+//        val pendingIntent = PendingIntent.getBroadcast(
+//            context,
+//            prayerKey.hashCode(),
+//            prayerIntent,
+//            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+//        )
+//
+//        // Cancel existing alarm if it exists
+//        alarmManager.cancel(pendingIntent)
+//
+//        // Schedule new alarm
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            alarmManager.setExactAndAllowWhileIdle(
+//                AlarmManager.RTC_WAKEUP,
+//                prayerCalendar.timeInMillis,
+//                pendingIntent
+//            )
+//        }
+//
+//        // Update shared preferences
+//        editor.putBoolean(prayerKey, true)
+//    }
+//    editor.apply()
+//}
 
-    timings.forEach { (prayerName, prayerTime) ->
-        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val prayerCalendar = Calendar.getInstance().apply {
-            time = sdf.parse(prayerTime) ?: return@forEach
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            // Adjust the time to the specified date
-            set(Calendar.YEAR, dateKey.substring(0, 4).toInt())
-            set(Calendar.MONTH, dateKey.substring(5, 7).toInt() - 1)
-            set(Calendar.DAY_OF_MONTH, dateKey.substring(8).toInt())
-        }
+//class PrayerAlarmReceiver : BroadcastReceiver() {
+//    override fun onReceive(context: Context?, intent: Intent?) {
+//        val prayerName = intent?.getStringExtra("prayer_name") ?: return
+//        val prayerTime = intent.getStringExtra("prayer_time") ?: return
+//
+//        if (context != null) {
+//            NotificationUtil.showNotification(
+//                context,
+//                "Prayer Time: $prayerName",
+//                "It's time for $prayerName prayer at $prayerTime"
+//            )
+//        }
+//    }
+//}
 
-        val currentTime = Calendar.getInstance()
-        if (prayerCalendar.before(currentTime)) return@forEach
-
-        val prayerKey = "$dateKey-$prayerName"
-        val prayerIntent = Intent(context, PrayerAlarmReceiver::class.java).apply {
-            putExtra("prayer_name", prayerName)
-            putExtra("prayer_time", prayerTime)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            prayerKey.hashCode(),
-            prayerIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Cancel existing alarm if it exists
-        alarmManager.cancel(pendingIntent)
-
-        // Schedule new alarm
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                prayerCalendar.timeInMillis,
-                pendingIntent
-            )
-        }
-
-        // Update shared preferences
-        editor.putBoolean(prayerKey, true)
-    }
-    editor.apply()
-}
-
-class PrayerAlarmReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context?, intent: Intent?) {
-        val prayerName = intent?.getStringExtra("prayer_name") ?: return
-        val prayerTime = intent.getStringExtra("prayer_time") ?: return
-
-        if (context != null) {
-            NotificationUtil.showNotification(
-                context,
-                "Prayer Time: $prayerName",
-                "It's time for $prayerName prayer at $prayerTime"
-            )
-        }
-    }
-}
-
-object NotificationUtil {
-    private const val CHANNEL_ID = "prayer_times_channel"
-    private const val CHANNEL_NAME = "Prayer Times"
-    private const val CHANNEL_DESC = "Notifications for prayer times"
-
-    fun createNotificationChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = CHANNEL_DESC
-            }
-            val notificationManager: NotificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    fun showNotification(context: Context, title: String, message: String) {
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.msg_mini_autodelete_timer) // Replace with your own icon
-            .setContentTitle(title)
-            .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-
-        with(NotificationManagerCompat.from(context)) {
-            notify(System.currentTimeMillis().toInt(), builder.build())
-        }
-    }
-}
+//object NotificationUtil {
+//    private const val CHANNEL_ID = "prayer_times_channel"
+//    private const val CHANNEL_NAME = "Prayer Times"
+//    private const val CHANNEL_DESC = "Notifications for prayer times"
+//
+//    fun createNotificationChannel(context: Context) {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            val channel = NotificationChannel(
+//                CHANNEL_ID,
+//                CHANNEL_NAME,
+//                NotificationManager.IMPORTANCE_HIGH
+//            ).apply {
+//                description = CHANNEL_DESC
+//            }
+//            val notificationManager: NotificationManager =
+//                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//            notificationManager.createNotificationChannel(channel)
+//        }
+//    }
+//
+//    fun showNotification(context: Context, title: String, message: String) {
+//        val soundUri = Uri.parse("android.resource://${context.packageName}/raw/prayer_time_sound")
+//
+//        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+//            .setSmallIcon(R.drawable.msg_mini_autodelete_timer) // Replace with your own icon
+//            .setContentTitle(title)
+//            .setContentText(message)
+//            .setSound(soundUri)
+//            .setPriority(NotificationCompat.PRIORITY_HIGH)
+//
+//        with(NotificationManagerCompat.from(context)) {
+//            notify(System.currentTimeMillis().toInt(), builder.build())
+//        }
+//    }
+//}

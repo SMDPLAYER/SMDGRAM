@@ -38,7 +38,8 @@
     <uses-feature
         android:name="android.hardware.sensor.proximity"
         android:required="false" />
-
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.READ_CLIPBOARD" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -123,13 +124,28 @@
         android:theme="@style/Theme.TMessages.Start"
         tools:replace="android:supportsRtl">
         <activity
-            android:windowSoftInputMode="adjustResize"
-            android:name="org.telegram.ui.HiddenPasscodeActivity"
+            android:name="org.telegram.ui.PraySettingsActivity"
             android:exported="false" />
         <activity
-            android:theme="@style/Permissions.TransparentTheme"
-            android:name=".components.permissions.PermissionsActivity"
+            android:name="org.telegram.ui.PrayNotificationsActivity"
             android:exported="false" />
+        <!-- Prayer Alarm Receiver -->
+        <receiver android:name=".components.notifications.PrayerAlarmReceiver" />
+        <activity
+            android:name="org.telegram.ui.PrayCalculationMethodActivity"
+            android:exported="false" />
+        <activity
+            android:name="org.telegram.ui.HiddenPasscodeActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="org.telegram.ui.PrayChangeTimeActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".components.permissions.PermissionsActivity"
+            android:exported="false"
+            android:theme="@style/Permissions.TransparentTheme" />
         <activity
             android:name="org.telegram.ui.LaunchActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
@@ -246,79 +262,9 @@
         </activity>
 
         <activity-alias
-            android:name="org.telegram.ui.CallsActivity"
+            android:name=".DefaultIcon"
+            android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.CALL_PHONE"
-            android:targetActivity="org.telegram.ui.LaunchActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data android:mimeType="vnd.android.cursor.item/vnd.org.telegram.messenger.android.call" />
-                <data android:mimeType="vnd.android.cursor.item/vnd.org.telegram.messenger.android.call.video" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".NoxIcon"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/icon_2_launcher"
-            android:roundIcon="@mipmap/icon_2_launcher_round"
-            android:targetActivity="org.telegram.ui.LaunchActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
-        </activity-alias>
-        <activity-alias
-            android:name=".TurboIcon"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/icon_5_launcher"
-            android:roundIcon="@mipmap/icon_5_launcher_round"
-            android:targetActivity="org.telegram.ui.LaunchActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
-        </activity-alias>
-        <activity-alias
-            android:name=".PremiumIcon"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/icon_3_launcher"
-            android:roundIcon="@mipmap/icon_3_launcher_round"
-            android:targetActivity="org.telegram.ui.LaunchActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
-        </activity-alias>
-        <activity-alias
-            android:name=".AquaIcon"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/icon_4_launcher"
-            android:roundIcon="@mipmap/icon_4_launcher_round"
             android:targetActivity="org.telegram.ui.LaunchActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -350,9 +296,11 @@
                 android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
-            android:name=".DefaultIcon"
-            android:enabled="true"
+            android:name=".AquaIcon"
+            android:enabled="false"
             android:exported="true"
+            android:icon="@mipmap/icon_4_launcher"
+            android:roundIcon="@mipmap/icon_4_launcher_round"
             android:targetActivity="org.telegram.ui.LaunchActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -364,6 +312,74 @@
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".PremiumIcon"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/icon_3_launcher"
+            android:roundIcon="@mipmap/icon_3_launcher_round"
+            android:targetActivity="org.telegram.ui.LaunchActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".TurboIcon"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/icon_5_launcher"
+            android:roundIcon="@mipmap/icon_5_launcher_round"
+            android:targetActivity="org.telegram.ui.LaunchActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name=".NoxIcon"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/icon_2_launcher"
+            android:roundIcon="@mipmap/icon_2_launcher_round"
+            android:targetActivity="org.telegram.ui.LaunchActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name="org.telegram.ui.CallsActivity"
+            android:exported="true"
+            android:permission="android.permission.CALL_PHONE"
+            android:targetActivity="org.telegram.ui.LaunchActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="vnd.android.cursor.item/vnd.org.telegram.messenger.android.call" />
+                <data android:mimeType="vnd.android.cursor.item/vnd.org.telegram.messenger.android.call.video" />
+            </intent-filter>
         </activity-alias>
 
         <activity
@@ -444,11 +460,11 @@
         <activity
             android:name=".OpenChatReceiver"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
-            android:exported="true"></activity>
+            android:exported="true" />
         <activity
             android:name=".OpenAttachedMenuBotReceiver"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
-            android:exported="true"></activity>
+            android:exported="true" />
         <activity
             android:name="org.telegram.ui.PopupNotificationActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
@@ -457,7 +473,7 @@
             android:resizeableActivity="false"
             android:taskAffinity=""
             android:theme="@style/Theme.TMessages.PopupNotification"
-            android:windowSoftInputMode="adjustResize|stateHidden"></activity>
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name="org.telegram.ui.VoIPPermissionActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
