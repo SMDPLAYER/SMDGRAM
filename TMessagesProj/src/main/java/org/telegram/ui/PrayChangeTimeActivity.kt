@@ -77,7 +77,7 @@ class PrayChangeTimeActivity : AppCompatActivity() {
                 setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite))
                 setText(name, true)
                 layoutParams = LinearLayout.LayoutParams(
-                    LayoutParams.WRAP_CONTENT,
+                    LayoutParams.MATCH_PARENT,
                     LayoutParams.WRAP_CONTENT,
                     1.0f
                 )
